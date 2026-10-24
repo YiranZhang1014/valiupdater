@@ -11,39 +11,70 @@ to_data_table <- function(data) {
 }
 
 #' Convert factor columns to dummy variables
-#' Now can only handle factor columns, character columns will be ignored
-#' @param data A data.table
-#' @return A data.table with dummy variables for factor columns
+#' This function takes a data.table and a vector of variable names, and converts
+#' the factor columns to dummy variables.
+#' @param data A data.table containing the dataset.
+#' @param vars A character vector of variable names to be converted to dummy variables.
+#' @return A data.table with the specified factor columns converted to dummy variables.
 #'
 #' @export
-dummy_vars <- function(data) {
+dummy_vars <- function(data, vars) {
   # Copy the data to avoid modifying the original data.table by reference
   new_data <- copy(data)
   # Check and convert to data.table if necessary
   dt <- to_data_table(new_data)
 
-  factor_cols <- names(dt)[sapply(dt, is.factor)]
-  if (length(factor_cols) == 0) {
-    return(dt)
+  # Check if all specified variables exist in the dataset
+  missing_vars <- setdiff(vars, names(dt))
+  if (length(missing_vars) > 0) {
+    stop(
+      "The following variables are missing in the data: ",
+      paste(missing_vars, collapse = ", ")
+    )
   }
 
-  for (j in factor_cols) {
+  # Check if the specified variables are either factor or character types
+  # We use .SDcols to subset the data.table for checking
+  valid_types <- sapply(dt[, .SD, .SDcols = vars], function(x) {
+    is.factor(x) || is.character(x)
+  })
+  invalid_vars <- vars[!valid_types]
+
+  if (length(invalid_vars) > 0) {
+    stop(
+      "The following variables must be factor or character types: ",
+      paste(invalid_vars, collapse = ", ")
+    )
+  }
+
+  # Loop through the specified variables to create dummy columns
+  for (j in vars) {
+    # Coerce character to factor to ensure stable behaviour in model.matrix
+    if (is.character(dt[[j]])) {
+      set(dt, j = j, value = as.factor(dt[[j]]))
+    }
+
     dummy_mat <- stats::model.matrix.lm(
       ~ -1 + dt[[j]],
       na.action = "na.pass"
     )
+
+    # Standardise the column names to format "OriginalVarName_CategoryName"
     colnames(dummy_mat) <- paste(
       j,
       sub("dt\\[\\[j\\]\\]", "", colnames(dummy_mat)),
       sep = "_"
     )
 
+    # Attach the new dummy columns to the data.table by reference
     for (col_name in colnames(dummy_mat)) {
       set(dt, j = col_name, value = dummy_mat[, col_name])
     }
   }
-  # Remove original factor columns
-  dt[, (factor_cols) := NULL]
+
+  # Remove the original factor/character columns
+  dt[, (vars) := NULL]
+
   return(dt)
 }
 
