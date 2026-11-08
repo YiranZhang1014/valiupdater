@@ -90,7 +90,7 @@ cali_plot.logistic <- function(
   plot_title = "Calibration Plot",
   hist_bins = 100,
   hist_type = c("density", "count"),
-  smooth_method = c("gam", "lowess"), # Choice of smoother
+  smooth_method = c("lowess", "gam"), # Choice of smoother
   lowess_frac = 0.5, # Window size for lowess
   lowess_delta = 0.01, # Distance threshold for lowess
   axis_lim = c(0, 1) # Axis limits applied to both X and Y axes

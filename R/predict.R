@@ -53,12 +53,12 @@ predict.logistic <- function(
   res_lst <- list()
 
   # Linear predictor
-  if (type %in% c("lp", "all")) {
+  if (type %in% c("link", "all")) {
     res_lst$linear_predictor <- linear_predictor
   }
 
   # Probability
-  if (type %in% c("prob", "all")) {
+  if (type %in% c("response", "all")) {
     res_lst$probability <- 1 / (1 + exp(-linear_predictor))
   }
 
